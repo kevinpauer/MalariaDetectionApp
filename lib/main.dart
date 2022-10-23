@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:convert';
+
 
 import 'package:tflite/tflite.dart';
 
@@ -37,6 +39,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   File? _image;
   List? _outputs;
+  String? _result = "";
   PickedFile? _pickedFile;
   bool _isButtonDisabled = true;
 
@@ -51,6 +54,7 @@ class _HomePageState extends State<HomePage> {
   // Implementing the image picker
   Future<void> _pickImage() async {
     print("Function pickImage is called!");
+    _result = "";
     _pickedFile=
     await _picker.getImage(source: ImageSource.gallery);
     if (_pickedFile != null) {
@@ -65,14 +69,23 @@ class _HomePageState extends State<HomePage> {
   classifyImage(File image) async {
     print("Start predict");
     var output = await Tflite.runModelOnImage(
-      path: image.path,
-      imageMean: 80.0,   // defaults to 117.0
-      threshold: 0.2,   // defaults to 0.1
-      asynch: true
+        path: image.path,
+        imageMean: 0.5,
+        imageStd: 1.0,
+        threshold: 0.1,
+        numResults: 1,
+        asynch: true
     );
-    print("predict = "+output.toString());
+    var result = "malaria";
+    if (output != null && output.length != 0){
+      var temp = output[0];
+      result = (temp['index'] == 1) ? "healthy" : "malaria";
+    }
+
+    print("predict = "+result);
     setState(() {
       _outputs = output;
+      _result = result;
     });
   }
 
@@ -121,13 +134,22 @@ class _HomePageState extends State<HomePage> {
                     : const Text('Please select an image'),
               ),
               Center(
-                child: ElevatedButton(
-                  onPressed: _isButtonDisabled ? null : ()=> classifyImage(
-                    File(_pickedFile!.path)
-                  ),
-                  child: Text('Predict'),
-                )
+                  child: ElevatedButton(
+                    onPressed: _isButtonDisabled ? null : ()=> classifyImage(
+                        File(_pickedFile!.path)
+                    ),
+                    child: Text('Predict'),
+                  )
               ),
+              Container(
+                margin: const EdgeInsets.all(30.0),
+                child: Text('Result:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 23)),
+              ),
+              Container(
+                child: Text(_result.toString(),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 23)),
+              )
             ]),
           ),
         ));
