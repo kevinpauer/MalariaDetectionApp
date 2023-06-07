@@ -1,4 +1,5 @@
 # Miscellaneous
+/cell_classification/cell_images/
 *.class
 *.log
 *.pyc
